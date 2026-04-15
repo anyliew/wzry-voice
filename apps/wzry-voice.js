@@ -23,12 +23,40 @@ export class WzryVoicePlugin extends plugin {
 
   async wzry (e) {
     const triggerWord = e.msg
-    logger.info(`[wzry-voice] 开始处理"${triggerWord}" - 三步发送`)
+    logger.info(`[wzry-voice] 开始处理"${triggerWord}" - 三步发送（新顺序：图片→固定语音→随机语音）`)
 
     try {
-      // 第一步：发送固定语音 leige-001.mp3
+      // 第一步：从 images/wzry/ 随机选取一个 webp 发送，并使用引用回复
+      const randomImageDir = './plugins/wzry-voice/images/wzry'
+      logger.info(`第一步：查找随机图片文件夹 ${randomImageDir}`)
+      let randomImagePath = null
+      if (fs.existsSync(randomImageDir)) {
+        const files = fs.readdirSync(randomImageDir)
+        const webpFiles = files.filter(f => f.toLowerCase().endsWith('.webp'))
+        logger.info(`[wzry-voice] 找到 ${webpFiles.length} 个WebP文件`)
+        if (webpFiles.length > 0) {
+          const randIndex = Math.floor(Math.random() * webpFiles.length)
+          const selected = webpFiles[randIndex]
+          randomImagePath = path.join(randomImageDir, selected)
+          logger.info(`[wzry-voice] 随机选择图片: ${selected}`)
+          if (fs.existsSync(randomImagePath)) {
+            await e.reply(segment.image(randomImagePath), true)   // 引用回复
+            logger.info(`[wzry-voice] 随机图片发送成功(引用回复): ${selected}`)
+          } else {
+            logger.warn(`[wzry-voice] 随机图片文件不存在: ${randomImagePath}`)
+          }
+        } else {
+          logger.warn('[wzry-voice] 随机图片文件夹中没有WebP文件')
+          await e.reply('随机图片文件夹中没有WebP文件')
+        }
+      } else {
+        logger.warn(`[wzry-voice] 随机图片文件夹不存在: ${randomImageDir}`)
+        await e.reply('随机图片文件夹不存在')
+      }
+
+      // 第二步：发送固定语音 leige-001.mp3
       const fixedAudioPath = './plugins/wzry-voice/voice/leige-001.mp3'
-      logger.info(`第一步：尝试发送固定语音 ${fixedAudioPath}`)
+      logger.info(`第二步：尝试发送固定语音 ${fixedAudioPath}`)
       if (fs.existsSync(fixedAudioPath)) {
         await e.reply(segment.record(fixedAudioPath))
         logger.info(`[wzry-voice] 固定语音发送成功: leige-001.mp3`)
@@ -37,9 +65,9 @@ export class WzryVoicePlugin extends plugin {
         await e.reply('固定语音文件不存在')
       }
 
-      // 第二步：从 voice/wzry/ 随机选取一个 mp3 发送
+      // 第三步：从 voice/wzry/ 随机选取一个 mp3 发送
       const randomVoiceDir = './plugins/wzry-voice/voice/wzry'
-      logger.info(`第二步：查找随机语音文件夹 ${randomVoiceDir}`)
+      logger.info(`第三步：查找随机语音文件夹 ${randomVoiceDir}`)
       let randomAudioPath = null
       if (fs.existsSync(randomVoiceDir)) {
         const files = fs.readdirSync(randomVoiceDir)
@@ -65,35 +93,7 @@ export class WzryVoicePlugin extends plugin {
         await e.reply('随机语音文件夹不存在')
       }
 
-      // 第三步：从 images/wzry/ 随机选取一个 webp 发送
-      const randomImageDir = './plugins/wzry-voice/images/wzry'
-      logger.info(`第三步：查找随机图片文件夹 ${randomImageDir}`)
-      let randomImagePath = null
-      if (fs.existsSync(randomImageDir)) {
-        const files = fs.readdirSync(randomImageDir)
-        const webpFiles = files.filter(f => f.toLowerCase().endsWith('.webp'))
-        logger.info(`[wzry-voice] 找到 ${webpFiles.length} 个WebP文件`)
-        if (webpFiles.length > 0) {
-          const randIndex = Math.floor(Math.random() * webpFiles.length)
-          const selected = webpFiles[randIndex]
-          randomImagePath = path.join(randomImageDir, selected)
-          logger.info(`[wzry-voice] 随机选择图片: ${selected}`)
-          if (fs.existsSync(randomImagePath)) {
-            await e.reply(segment.image(randomImagePath))
-            logger.info(`[wzry-voice] 随机图片发送成功: ${selected}`)
-          } else {
-            logger.warn(`[wzry-voice] 随机图片文件不存在: ${randomImagePath}`)
-          }
-        } else {
-          logger.warn('[wzry-voice] 随机图片文件夹中没有WebP文件')
-          await e.reply('随机图片文件夹中没有WebP文件')
-        }
-      } else {
-        logger.warn(`[wzry-voice] 随机图片文件夹不存在: ${randomImageDir}`)
-        await e.reply('随机图片文件夹不存在')
-      }
-
-      logger.info(`[wzry-voice] "${triggerWord}"三步处理完成`)
+      logger.info(`[wzry-voice] "${triggerWord}"三步处理完成（图片→固定语音→随机语音）`)
     } catch (error) {
       logger.error(`[wzry-voice] 处理"${triggerWord}"失败: ${error.message}`)
       logger.error(error.stack)
